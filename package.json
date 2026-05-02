@@ -15,11 +15,11 @@
 	"license": "MIT",
 	"description": "",
 	"devDependencies": {
-		"@electron/packager": "^18.4.4",
-		"electron": "^33.4.11",
+		"@electron/packager": "^18.3.6",
+		"electron": "^33.1.0",
 		"electron-builder": "^25.1.8",
 		"electron-winstaller": "^5.4.0",
-		"tailwindcss": "^3.4.19"
+		"tailwindcss": "^3.4.14"
 	},
 	"dependencies": {
 		"file-type": "16.5.4"
