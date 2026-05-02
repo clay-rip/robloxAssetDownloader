@@ -1,0 +1,151 @@
+name: Build app
+
+on:
+    push:
+        branches: ["main"]
+
+jobs:
+    release-ubuntu:
+        if: contains(github.event.head_commit.message, '[release]')
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        env:
+            GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+            - run: npm ci
+            - run: npm run release --if-present
+
+    release-macos:
+        if: contains(github.event.head_commit.message, '[release]')
+        runs-on: macos-latest
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        env:
+            GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+            - run: npm ci
+            - run: npm run release --if-present
+
+    release-windows:
+        if: contains(github.event.head_commit.message, '[release]')
+        runs-on: windows-latest
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        env:
+            GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+            - run: npm ci
+            - run: npm run release --if-present
+
+    build-ubuntu:
+        if: contains(github.event.head_commit.message, '[build]')
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+            - run: npm ci
+            - run: npm run dist --if-present
+            - name: Zip dist folder
+              if: success()
+              run: zip -r dist.zip dist
+            - name: Upload dist artifact
+              if: success()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: dist-linux
+                  path: dist.zip
+
+    build-macos:
+        if: contains(github.event.head_commit.message, '[build]')
+        runs-on: macos-latest
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+            - run: npm ci
+            - run: npm run dist --if-present
+            - name: Zip dist folder
+              if: success()
+              run: zip -r dist.zip dist
+            - name: Upload dist artifact
+              if: success()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: dist-macos
+                  path: dist.zip
+
+    build-windows:
+        if: contains(github.event.head_commit.message, '[build]')
+        runs-on: windows-latest
+
+        strategy:
+            matrix:
+                node-version: [20.x]
+
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+            - run: npm ci
+            - run: npm run dist --if-present
+            - name: Zip dist folder
+              if: success()
+              run: Compress-Archive -Path dist -DestinationPath dist.zip
+              shell: pwsh
+            - name: Upload dist artifact
+              if: success()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: dist-windows
+                  path: dist.zip

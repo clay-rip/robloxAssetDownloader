@@ -4,6 +4,7 @@ const path = require("path");
 const stream = require("stream");
 const { promisify } = require("util");
 const FileType = require("file-type");
+const zlib = require("zlib");
 
 const pipeline = promisify(stream.pipeline);
 
@@ -90,6 +91,28 @@ ipcMain.handle(
 			return await Promise.race([downloadProcess(), timeout]);
 		} catch (error) {
 			console.error("Download error:", error);
+			throw error;
+		}
+	}
+);
+
+ipcMain.handle(
+	"save-failed-assets",
+	async (event, { params, content }) => {
+		try {
+			const downloadsPath = app.getPath("downloads");
+			let crc;
+			try {
+				crc = zlib.crc32(params).toString(16);
+			} catch (e) {
+				crc = Math.random().toString(16).slice(2, 10);
+			}
+			const fileName = `FailedAssets_${crc}.txt`;
+			const filePath = path.join(downloadsPath, fileName);
+			await fs.promises.writeFile(filePath, content);
+			return filePath;
+		} catch (error) {
+			console.error("Save error:", error);
 			throw error;
 		}
 	}

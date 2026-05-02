@@ -184,55 +184,72 @@ downloadButtonBulk.addEventListener("click", async () => {
 		const assetId = assetIds[i];
 		const url = `https://assetdelivery.roblox.com/v1/asset?id=${assetId}`;
 		const cookies = cookieInput2.value;
-		let errored = false;
-		for (let j = 0; j < placeIds.length; j++) {
-			const robloxPlaceId = placeIds[j];
-			try {
-				console.log(
-					"Download request:",
-					url,
-					"PlaceId:",
-					robloxPlaceId
-				);
-				const filePath = await window.electron.ipcRenderer.invoke(
-					"download-request",
-					{
-						url: url,
-						userAgent: "Roblox/WinInet",
-						robloSecurity: cookies,
-						robloxPlaceId: robloxPlaceId,
+		let errored = true;
+		for (let attempt = 0; attempt < 5; attempt++) {
+			if (attempt > 0) {
+				await new Promise((resolve) => setTimeout(resolve, 3000));
+			}
+			errored = true;
+			for (let j = 0; j < placeIds.length; j++) {
+				const robloxPlaceId = placeIds[j];
+				try {
+					console.log(
+						"Download request:",
+						url,
+						"PlaceId:",
+						robloxPlaceId,
+						"Attempt:",
+						attempt + 1
+					);
+					const filePath = await window.electron.ipcRenderer.invoke(
+						"download-request",
+						{
+							url: url,
+							userAgent: "Roblox/WinInet",
+							robloSecurity: cookies,
+							robloxPlaceId: robloxPlaceId,
+						}
+					);
+					if (filePath.startsWith("err")) {
+						console.log(filePath);
+						let error = {
+							status: filePath.split("|")[0].slice(3),
+							message: filePath.split("|")[1],
+							code: filePath.split("|")[2],
+						};
+						console.log(error);
+						continue;
+					} else {
+						errored = false;
+						break;
 					}
-				);
-				if (filePath.startsWith("err")) {
-					console.log(filePath);
-					let error = {
-						status: filePath.split("|")[0].slice(3),
-						message: filePath.split("|")[1],
-						code: filePath.split("|")[2],
-					};
+				} catch (error) {
 					console.log(error);
-					if (j === placeIds.length - 1) {
-						errored = true;
-					}
 					continue;
-				} else {
-					errored = false;
-					break;
 				}
-			} catch (error) {
-				console.log(error);
-				if (j === placeIds.length - 1) {
-					errored = true;
-				}
-				continue;
+			}
+			if (!errored) {
+				break;
 			}
 		}
 		if (errored) {
+			console.log(`Failed to download asset ${assetId} after 5 attempts.`);
 			erroredIds.push(assetId);
 		}
 	}
 	if (erroredIds.length > 0) {
+		console.log("The following asset IDs completely failed:", erroredIds);
 		loader.querySelector("svg").classList.remove("animate-spin");
+
+		let failedAssetsPath = "";
+		try {
+			failedAssetsPath = await window.electron.ipcRenderer.invoke("save-failed-assets", {
+				params: document.querySelector("#placeIds").value + document.querySelector("#assetIds").value,
+				content: erroredIds.join("\n")
+			});
+		} catch (e) {
+			console.error("Failed to save FailedAssets file:", e);
+		}
 
 		loader.querySelector("svg").classList.remove("text-blue-500");
 		loader.querySelector("svg").classList.remove("dark:text-blue-400");
@@ -250,10 +267,11 @@ downloadButtonBulk.addEventListener("click", async () => {
 			"svg"
 		).innerHTML = `<path d="M12 9v4m-1.637-9.409L2.257 17.125a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636-2.87L13.637 3.59a1.914 1.914 0 0 0-3.274 0zM12 16h.01"/>`;
 		setTimeout(() => {
-			alert(
-				"The following asset ids failed to download:\n" +
-					erroredIds.join("\n")
-			);
+			let alertMessage = "The following asset ids failed to download:\n" + erroredIds.join("\n");
+			if (failedAssetsPath) {
+				alertMessage += `\n\nA list of the failed assets has been saved to:\n${failedAssetsPath}`;
+			}
+			alert(alertMessage);
 			loader.classList.add("hidden");
 		}, 10);
 	} else {
