@@ -185,11 +185,13 @@ downloadButtonBulk.addEventListener("click", async () => {
 		const url = `https://assetdelivery.roblox.com/v1/asset?id=${assetId}`;
 		const cookies = cookieInput2.value;
 		let errored = true;
+		let isRateLimited = false;
 		for (let attempt = 0; attempt < 5; attempt++) {
-			if (attempt > 0) {
+			if (attempt > 0 && isRateLimited) {
 				await new Promise((resolve) => setTimeout(resolve, 3000));
 			}
 			errored = true;
+			isRateLimited = false;
 			for (let j = 0; j < placeIds.length; j++) {
 				const robloxPlaceId = placeIds[j];
 				try {
@@ -217,6 +219,9 @@ downloadButtonBulk.addEventListener("click", async () => {
 							message: filePath.split("|")[1],
 							code: filePath.split("|")[2],
 						};
+						if (error.status === "429") {
+							isRateLimited = true;
+						}
 						console.log(error);
 						continue;
 					} else {
